@@ -1,0 +1,110 @@
+
+
+# Container recipe
+
+ 
+
+# NOTE: this definition file depends on features only available in
+
+# Singularity 3.2 and later.
+
+BootStrap: docker
+
+From: ubuntu:23.04
+
+ 
+
+%labels
+
+    HARDWARE CPU
+
+    MAINTAINER email@uq.edu.au
+
+ 
+
+%files
+
+    ./pyproject.toml /app
+
+    ./src /app/src
+
+    ./models /models
+
+#    somefile.tar.gz /opt/somefile.tar.gz
+
+ 
+
+%environment
+
+    export LANGUAGE=en_AU.UTF-8
+
+    export LC_ALL=en_AU.UTF-8
+
+    export PYTHONPATH="/app:$PYTHONPATH"
+
+#    export PATH=/opt/myapp:$PATH
+
+ 
+
+%post
+
+    . /.singularity.d/env/10-docker*.sh
+
+    export LANGUAGE=en_AU.UTF-8
+
+    export LC_ALL=en_AU.UTF-8
+
+    export PATH=/usr/local/stata18:$PATH
+
+ 
+
+    echo "deb http://us.archive.ubuntu.com/ubuntu/ lunar main restricted" >> /etc/apt/sources.list.d/hpccm.list
+
+    echo "deb http://us.archive.ubuntu.com/ubuntu/ lunar-updates main restricted" >> /etc/apt/sources.list.d/hpccm.list
+
+    echo "deb http://us.archive.ubuntu.com/ubuntu/ lunar universe" >> /etc/apt/sources.list.d/hpccm.list
+
+    echo "deb http://us.archive.ubuntu.com/ubuntu/ lunar-updates universe" >> /etc/apt/sources.list.d/hpccm.list
+
+    apt-get update -y
+
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+
+        ubuntu-desktop \
+
+        locales \
+
+        software-properties-common
+
+    locale-gen en_AU.UTF-8
+
+ 
+
+#put commands to install software etc. here
+
+apt update && apt install -y libsndfile1 ffmpeg python3.10
+
+mkdir /app && mkdir /app/src
+WORKDIR /app
+
+# pip install git+https://github.com/google-research/perch.git@8cc4468afaac730e77d84ac447f0874f09d10a25
+pip install git+https://github.com/google-research/perch.git@3746672d406c6cfe48acb0e725248cea05f57445
+
+# this is the trained linear models
+
+# this is the embedding model
+python /app/src/download_model.py --version 4 --destination /models
+
+pip install librosa numpy pytest pytest-mock
+
+ 
+
+    apt-get clean all
+
+    rm -rf /var/lib/apt/lists/*
+
+ 
+
+%runscript
+
+    exec $* "$@"
